@@ -3,7 +3,7 @@
 # 🛰️ ResQGrid
 ### Next-Gen Decentralized Emergency Roadside Assistance & Off-Grid Mesh Rescue
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel_App-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://resqgrid.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-resqgrid--eight.vercel.app-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://resqgrid-eight.vercel.app/)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8.2-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
 [![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
@@ -13,7 +13,7 @@
 
 <br/>
 
-🌐 **Live Application URL**: [https://resqgrid.vercel.app](https://resqgrid.vercel.app)
+🌐 **Live Application URL**: [https://resqgrid-eight.vercel.app/](https://resqgrid-eight.vercel.app/)
 
 <br/>
 
