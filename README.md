@@ -3,12 +3,17 @@
 # 🛰️ ResQGrid
 ### Next-Gen Decentralized Emergency Roadside Assistance & Off-Grid Mesh Rescue
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel_App-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://resqgrid.vercel.app)
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8.2-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vite.dev/)
 [![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS_v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Framer Motion](https://img.shields.io/badge/Framer_Motion-12.x-FF0055?style=for-the-badge&logo=framer&logoColor=white)](https://www.framer.com/motion/)
 [![IN865 ISM Mesh](https://img.shields.io/badge/Radio-IN865_%2B_BLE_5.3-B6F014?style=for-the-badge&logo=bluetooth&logoColor=black)](https://github.com/Rushiiii505/ResQGrid)
+
+<br/>
+
+🌐 **Live Application URL**: [https://resqgrid.vercel.app](https://resqgrid.vercel.app)
 
 <br/>
 
@@ -96,6 +101,7 @@ Inspired by modern tactile blueprint diagrams and high-contrast creative design:
 | **Icons & Visuals** | [Lucide React](https://lucide.dev/) + [Canvas Confetti](https://www.npmjs.com/package/canvas-confetti) |
 | **Audio Engine** | Synthesized Web Audio API |
 | **Typography** | Plus Jakarta Sans, Space Grotesk, JetBrains Mono |
+| **Deployment** | [Vercel](https://vercel.com/) |
 
 ---
 
@@ -161,6 +167,7 @@ ResQGrid/
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
+├── vercel.json
 └── README.md
 ```
 
