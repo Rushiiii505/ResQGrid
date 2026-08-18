@@ -1,0 +1,194 @@
+@import "tailwindcss";
+
+@theme {
+  --color-resq-bg: #041c22;
+  --color-resq-bg-deep: #011215;
+  --color-resq-bg-card: #082830;
+  --color-resq-lime: #b6f014;
+  --color-resq-lime-glow: #d4ff00;
+  --color-resq-cyan: #00f0ff;
+  --color-resq-purple: #9855ff;
+  --color-resq-orange: #ff5b37;
+  --color-resq-paper: #ffffff;
+  --color-resq-paper-muted: #f4f5f7;
+  --color-resq-ink: #0f172a;
+  
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  --font-heading: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: dark;
+  background-color: #041c22;
+  color: #f7f7f8;
+  font-family: var(--font-sans);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #041c22;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: center center;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Blueprint Interactive Matrix Canvas */
+.blueprint-grid-overlay {
+  background-image: 
+    radial-gradient(circle at 50% 50%, transparent 20%, rgba(4, 28, 34, 0.85) 90%),
+    linear-gradient(to right, rgba(182, 240, 20, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(182, 240, 20, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 96px 96px, 96px 96px;
+}
+
+/* Tactile Dog-Ear Folded Corner Card Styles */
+.dog-ear-card {
+  position: relative;
+  background: #ffffff;
+  color: #0d1b2a;
+  box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-radius: 4px;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+
+/* Dog-Ear Bottom-Right Fold */
+.dog-ear-br {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0 100%);
+}
+
+.dog-ear-br-lg {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 36px), calc(100% - 36px) 100%, 0 100%);
+}
+
+.dog-ear-br-flap {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+  box-shadow: -2px -2px 5px rgba(0, 0, 0, 0.25);
+  border-top-left-radius: 2px;
+  pointer-events: none;
+}
+
+.dog-ear-br-flap-lg {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+  box-shadow: -3px -3px 8px rgba(0, 0, 0, 0.28);
+  border-top-left-radius: 3px;
+  pointer-events: none;
+}
+
+/* Colored Flaps for Neon Lime & Teal Cards */
+.dog-ear-br-flap-lime {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #95ca0a 0%, #689204 100%);
+  box-shadow: -3px -3px 7px rgba(0, 0, 0, 0.3);
+  border-top-left-radius: 3px;
+  pointer-events: none;
+}
+
+.dog-ear-br-flap-cyan {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #00b8c4 0%, #00818a 100%);
+  box-shadow: -3px -3px 7px rgba(0, 0, 0, 0.3);
+  border-top-left-radius: 3px;
+  pointer-events: none;
+}
+
+/* Pushpin Element */
+.push-pin {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  position: absolute;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.6), inset 0 -2px 3px rgba(0,0,0,0.4);
+  z-index: 20;
+}
+
+.push-pin::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.7);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #011215;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0a3d47;
+  border-radius: 4px;
+  border: 1px solid rgba(182, 240, 20, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b6f014;
+}
+
+/* Glow Utilities */
+.glow-lime {
+  filter: drop-shadow(0 0 12px rgba(182, 240, 20, 0.45));
+}
+
+.glow-cyan {
+  filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.45));
+}
+
+.glow-pulse {
+  animation: pulseGlow 2.4s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+/* Dashed trajectory line pulse */
+@keyframes dashTravel {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.animate-dash {
+  animation: dashTravel 2s linear infinite;
+}
