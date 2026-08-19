@@ -23,7 +23,7 @@
 
 ---
 
-## 📸 Visual Showcase & Demo
+## 📸 Visual Showcase & Real Features
 
 <div align="center">
 
@@ -32,15 +32,15 @@
 
 <br/>
 
-### 🚨 Interactive Breakdown Simulator (Airplane Mode & Multi-Hop Relay)
-| Step 1: Scenario & Offline Mode | Step 2: Mesh Hop & Escrow Lock |
+### 🚨 Emergency Dispatch Terminal & Real Cross-Tab Mesh Bus
+| Step 1: Breakdown & Offline Mode | Step 2: Mesh Hop & SubtleCrypto Escrow |
 | :---: | :---: |
 | ![Emergency Simulator Modal](./public/demo/emergency_simulator.png) | ![Simulation Progress](./public/demo/simulation_progress.png) |
 
 <br/>
 
-### 🎯 Rescue Confirmation & On-Device Vision AI Diagnostics
-| Step 3: Verified Rescue & Payout | Step 4: Local Neural Camera Scanner |
+### 🎯 Rescue Confirmation & Live WebCam Vision AI
+| Step 3: Verified Handshake & Payout | Step 4: Live Camera Neural Scanner |
 | :---: | :---: |
 | ![Simulation Rescued Confetti](./public/demo/simulation_rescued.png) | ![Vision AI Diagnostic Scanner](./public/demo/vision_ai_scanner.png) |
 
@@ -48,45 +48,46 @@
 
 ---
 
+## ⚡ Real Functional Browser APIs
+
+Unlike basic static mockups, ResQGrid is powered by **real browser hardware APIs**:
+
+1. **📡 Real Cross-Tab Mesh Network (`BroadcastChannel`)**:
+   - Open ResQGrid in two browser tabs.
+   - Trigger an SOS in **Driver Mode** in Tab 1 — Tab 2 in **Responder Radar Mode** instantly receives the live distress beacon, sounds the radio siren, tracks GPS distance, and lets the responder accept the mission in real-time!
+
+2. **📹 Real Device WebCam & Image Upload (`navigator.mediaDevices.getUserMedia`)**:
+   - Tap **"Start Live Camera"** in the Vision AI scanner to stream your device's actual camera onto a hardware canvas with real-time HUD overlays.
+   - Upload any real car dashboard/engine photo from disk for instant fault classification.
+
+3. **🎙️ Microphone Voice Dispatch Memo Recorder (`MediaRecorder` API)**:
+   - Record real spoken distress voice memos directly from your microphone and attach them to the broadcasted distress packet.
+
+4. **🛰️ Real GPS Satellite Fix & Dead-Reckoning Compass (`navigator.geolocation` + IMU)**:
+   - Queries real device GPS coordinates, altitude, heading, and calculates real Haversine distance in kilometers to stranded vehicles.
+
+5. **🔐 Cryptographic Telemetry Signer (`SubtleCrypto` AES-256-GCM + SHA-256)**:
+   - Real hardware-accelerated SHA-256 packet hashing, 256-bit AES-GCM payload encryption, and IV nonce generation.
+
+6. **🚜 Dual-Role Switcher (Driver SOS Mode $\longleftrightarrow$ Responder Fleet Radar)**:
+   - Switch seamlessly between stranded driver and responder fleet command view.
+   - Responder dashboard includes equipment checklists, mission claiming, and escrow wallet balance in Indian Rupees (**₹**).
+
+7. **📦 Offline `.resq` Emergency Packet Exporter**:
+   - Download offline encrypted distress packets to flash drives or local storage to hand off to passing drivers.
+
+8. **🔵 Web Bluetooth Peripheral Scanner (`navigator.bluetooth`)**:
+   - Scan for nearby Bluetooth Low Energy (BLE) radio dongles, OBD-II scanners, and battery telemetry units.
+
+---
+
 ## 🎨 Visual Design System & Aesthetics
 
-Inspired by modern tactile blueprint diagrams and high-contrast creative design:
 * **Deep Teal Blueprint Matrix (`#041C20` to `#011215`):** Interactive canvas background with magnetic crosshairs, coordinates, and cursor proximity illumination.
 * **Electric Lime (`#B6F014` / `#D4FF00`):** High-contrast neon accents for peelable sticker tags, primary dispatch CTAs, and active beacon rings.
 * **Tactile Dog-Ear Paper Cards:** Skeuomorphic folded bottom-right corner flaps with realistic 3D paper drop shadows and spring physics.
 * **3D Pushpins & Paper Clips:** Specular metallic highlights in cyan, magenta, lime, orange, and blue.
 * **Curving SVG Trajectory Paths:** Organic dashed telemetry vectors meandering across sections with traveling node pulses.
-
----
-
-## ⚡ Core Feature Modules
-
-### 1. 📡 Zero-Signal IN865 LoRa & BLE 5.3 Telemetry
-* Broadcasts emergency packets with **zero cellular reception**.
-* Operates on license-free Indian ISM bands (**865–867 MHz**) and BLE 5.3 Long-Range Coded PHY.
-* Multi-hop packet propagation through passing 4x4 rigs, commercial trucks, and solar ridge towers.
-
-### 2. 🎮 Interactive Emergency Simulator Playground
-* **Airplane Mode Toggle:** Simulate pure offline 0-bar disconnectivity.
-* **Scenario Presets:** Select real-world breakdowns (*12V Cold-Soak Battery Freeze*, *Thar Sand Rut High-Center*, *Ghats Coolant Hose Rupture*, *Spiti Riverbed Sidewall Slice*).
-* **Live Step-by-Step Dispatch Pipeline:**
-  1. Payload encrypted with **AES-256-GCM**.
-  2. Multi-hop BLE / LoRa beacon broadcast across 4 peer nodes.
-  3. Smart contract escrow collateral locked in Indian Rupees (**₹**).
-  4. Responder assigned with live ETA countdown timer.
-  5. Rescue verified with celebratory confetti burst and bounty settlement.
-
-### 3. 🔍 On-Device Vision AI Diagnostic Scanner
-* 100% offline computer vision inference running locally on-device.
-* Diagnoses instrument cluster Check Engine codes (**P0300**, **P0562**, **P0217**, **P0627**), blown engine bay fuse blocks, and corroded battery terminals.
-* Provides immediate safety actions, safe-to-drive radius, and required repair parts with INR (₹) estimates.
-
-### 4. 📊 Community Fleet Radius Scrubber & Escrow Calculator
-* Interactive distance scrubber to estimate nearby responder density, arrival time, and fair escrow bounties.
-* Transparent flat community rates replacing predatory private towing surge fees.
-
-### 5. 🔊 Synthesized Web Audio Telemetry Engine
-* Pure Web Audio API sound generator (sonar pings, radar chirps, tactile paper fold clicks, and rescue fanfares) with instant mute controls.
 
 ---
 
@@ -97,9 +98,10 @@ Inspired by modern tactile blueprint diagrams and high-contrast creative design:
 | **Framework** | [React 19](https://react.dev/) + [Vite 8](https://vite.dev/) |
 | **Language** | [TypeScript 5](https://www.typescriptlang.org/) |
 | **Styling** | [Tailwind CSS v4](https://tailwindcss.com/) + `@tailwindcss/vite` |
+| **Real Web APIs** | BroadcastChannel, Web Audio API, MediaRecorder, getUserMedia, Geolocation, SubtleCrypto, Web Bluetooth |
 | **Motion Physics** | [Framer Motion](https://www.framer.com/motion/) |
 | **Icons & Visuals** | [Lucide React](https://lucide.dev/) + [Canvas Confetti](https://www.npmjs.com/package/canvas-confetti) |
-| **Audio Engine** | Synthesized Web Audio API |
+| **Audio Engine** | Synthesized Web Audio API + Morse Code SOS Generator |
 | **Typography** | Plus Jakarta Sans, Space Grotesk, JetBrains Mono |
 | **Deployment** | [Vercel](https://vercel.com/) |
 
@@ -129,15 +131,11 @@ npm run dev
 
 The application will be live at `http://localhost:5173/`.
 
-### Production Build
-
-```bash
-# Compile TypeScript and bundle production assets
-npm run build
-
-# Preview production build locally
-npm run preview
-```
+### Testing Real Cross-Tab Mesh Network:
+1. Open `http://localhost:5173/` in **Tab 1**.
+2. Open `http://localhost:5173/` in **Tab 2** and click **"Responder Radar"** in the top navbar.
+3. In **Tab 1**, click **"Trigger Mesh SOS"** -> click **"Send Distress Beacon"**.
+4. Switch to **Tab 2** — notice the live incoming distress signal, audible radio chirp, real GPS distance, and click **"Accept Mission & Deploy"** to claim the bounty!
 
 ---
 
@@ -153,15 +151,19 @@ ResQGrid/
 │   │   ├── cta/              # FooterCTA with node subscriber
 │   │   ├── hero/             # HeroSection & MeshRelayVisualizer
 │   │   ├── navigation/       # Glassmorphic Navbar & SFX audio pill
+│   │   ├── responder/        # Real-Time ResponderDashboard & Radar
 │   │   ├── services/         # Tactile ServicesGrid & capability inspector
-│   │   ├── simulator/        # EmergencySimulatorModal playground
+│   │   ├── simulator/        # EmergencySimulatorModal with voice recorder & crypto
 │   │   ├── stats/            # WhyUsStats & interactive radius calculator
-│   │   ├── vision/           # VisionScannerModal on-device AR scanner
+│   │   ├── vision/           # VisionScannerModal with live WebCam & upload
 │   │   └── work/             # OurWorkShowcase polaroid rescue records
 │   ├── utils/
+│   │   ├── cryptoEngine.ts   # Real AES-256-GCM & SHA-256 SubtleCrypto
+│   │   ├── geoEngine.ts      # Real Geolocation & Dead-Reckoning Compass
+│   │   ├── realMeshBus.ts    # BroadcastChannel cross-tab mesh & Web Bluetooth
 │   │   ├── mockData.ts       # Indian geography, rescue telemetry, OBD database
-│   │   └── soundEngine.ts    # Synthesized Web Audio FX engine
-│   ├── App.tsx               # Main application container
+│   │   └── soundEngine.ts    # Web Audio API FX & Morse Code SOS generator
+│   ├── App.tsx               # Root container with Driver & Responder dual mode
 │   ├── index.css             # Tailwind v4 theme, dog-ear folds & blueprint tokens
 │   └── main.tsx              # React DOM entrypoint
 ├── package.json

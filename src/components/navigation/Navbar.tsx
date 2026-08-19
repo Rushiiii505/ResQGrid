@@ -7,12 +7,16 @@ interface NavbarProps {
   onOpenSOSModal: () => void;
   onOpenVisionModal: () => void;
   activeNodesCount?: number;
+  viewMode: 'driver' | 'responder';
+  onToggleViewMode: (mode: 'driver' | 'responder') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   onOpenSOSModal,
   onOpenVisionModal,
   activeNodesCount = 4,
+  viewMode,
+  onToggleViewMode,
 }) => {
   const [isMuted, setIsMuted] = useState(sound.isMuted);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -69,18 +73,48 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Center: Navigation Links */}
-        <div className="hidden md:flex items-center gap-1 lg:gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-full text-xs font-heading font-bold text-slate-300">
-          {navLinks.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              onClick={() => sound.playClick(720)}
-              className="px-3 py-1 rounded-full transition-all hover:text-[#b6f014] hover:bg-white/10"
+        {/* Center: Navigation Links & Mode Switcher */}
+        <div className="hidden md:flex items-center gap-1 lg:gap-2 bg-white/5 border border-white/10 p-1 rounded-full text-xs font-heading font-bold text-slate-300">
+          <div className="flex items-center bg-black/40 p-0.5 rounded-full border border-white/10 mr-1">
+            <button
+              onClick={() => {
+                sound.playClick(800);
+                onToggleViewMode('driver');
+              }}
+              className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all cursor-pointer ${
+                viewMode === 'driver'
+                  ? 'bg-[#b6f014] text-[#041c22] font-black shadow-[0_0_10px_rgba(182,240,20,0.3)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              {link.label}
-            </a>
-          ))}
+              Driver SOS
+            </button>
+            <button
+              onClick={() => {
+                sound.playRadioSquelch();
+                onToggleViewMode('responder');
+              }}
+              className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all cursor-pointer ${
+                viewMode === 'responder'
+                  ? 'bg-cyan-400 text-[#041c22] font-black shadow-[0_0_10px_rgba(0,240,255,0.3)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Responder Radar
+            </button>
+          </div>
+
+          {viewMode === 'driver' &&
+            navLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                onClick={() => sound.playClick(720)}
+                className="px-3 py-1 rounded-full transition-all hover:text-[#b6f014] hover:bg-white/10"
+              >
+                {link.label}
+              </a>
+            ))}
         </div>
 
         {/* Right Actions: Audio Toggle + Vision AI + Trigger Mesh SOS */}

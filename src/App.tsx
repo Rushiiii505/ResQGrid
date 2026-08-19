@@ -6,6 +6,7 @@ import { HeroSection } from './components/hero/HeroSection';
 import { WhyUsStats } from './components/stats/WhyUsStats';
 import { ServicesGrid } from './components/services/ServicesGrid';
 import { OurWorkShowcase } from './components/work/OurWorkShowcase';
+import { ResponderDashboard } from './components/responder/ResponderDashboard';
 import { FooterCTA } from './components/cta/FooterCTA';
 import { EmergencySimulatorModal } from './components/simulator/EmergencySimulatorModal';
 import { VisionScannerModal } from './components/vision/VisionScannerModal';
@@ -13,6 +14,7 @@ import { VisionScannerModal } from './components/vision/VisionScannerModal';
 export function App() {
   const [isSOSModalOpen, setIsSOSModalOpen] = useState<boolean>(false);
   const [isVisionModalOpen, setIsVisionModalOpen] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'driver' | 'responder'>('driver');
 
   const handleOpenSOS = () => {
     setIsSOSModalOpen(true);
@@ -37,26 +39,35 @@ export function App() {
           onOpenSOSModal={handleOpenSOS}
           onOpenVisionModal={handleOpenVision}
           activeNodesCount={4}
+          viewMode={viewMode}
+          onToggleViewMode={setViewMode}
         />
 
-        {/* Hero Section */}
-        <main className="flex-1">
-          <HeroSection
-            onOpenSOSModal={handleOpenSOS}
-            onOpenVisionModal={handleOpenVision}
-          />
+        {/* Main Content: Driver Mode vs Responder Mode */}
+        <main className="flex-1 pt-14">
+          {viewMode === 'driver' ? (
+            <>
+              {/* Hero Section */}
+              <HeroSection
+                onOpenSOSModal={handleOpenSOS}
+                onOpenVisionModal={handleOpenVision}
+              />
 
-          {/* Why Us Section with Stacked Folded Paper Cards & Coverage Calculator */}
-          <WhyUsStats />
+              {/* Why Us Section with Stacked Folded Paper Cards & Coverage Calculator */}
+              <WhyUsStats />
 
-          {/* Services Section with Tactile Sticker Cards */}
-          <ServicesGrid
-            onOpenSOSModal={handleOpenSOS}
-            onOpenVisionModal={handleOpenVision}
-          />
+              {/* Services Section with Tactile Sticker Cards */}
+              <ServicesGrid
+                onOpenSOSModal={handleOpenSOS}
+                onOpenVisionModal={handleOpenVision}
+              />
 
-          {/* Our Work Section with Polaroid Real-World Rescues */}
-          <OurWorkShowcase />
+              {/* Our Work Section with Polaroid Real-World Rescues */}
+              <OurWorkShowcase />
+            </>
+          ) : (
+            <ResponderDashboard />
+          )}
 
           {/* Footer & CTA Section */}
           <FooterCTA onOpenSOSModal={handleOpenSOS} />

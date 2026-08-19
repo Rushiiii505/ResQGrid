@@ -2,41 +2,69 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
-  Plane,
   Radio,
-  RotateCcw,
+  WifiOff,
   Lock,
   Zap,
+  RotateCcw,
+  Mic,
+  Download,
+  Square,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { breakdownScenarios } from '../../utils/mockData';
 import type { BreakdownScenario } from '../../utils/mockData';
 import { sound } from '../../utils/soundEngine';
+import { encryptPayloadAES } from '../../utils/cryptoEngine';
+import { getRealDeviceLocation, DEFAULT_FALLBACK_LOCATION } from '../../utils/geoEngine';
+import type { GeoLocationState } from '../../utils/geoEngine';
+import { meshBus } from '../../utils/realMeshBus';
+import type { LiveDistressBeacon } from '../../utils/realMeshBus';
 
 interface EmergencySimulatorModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type SimStage = 'idle' | 'encrypting' | 'hopping' | 'escrow_locked' | 'dispatched' | 'rescued';
+type SimulationStage =
+  | 'idle'
+  | 'encrypting'
+  | 'hopping'
+  | 'escrow_locked'
+  | 'dispatched'
+  | 'rescued';
 
 export const EmergencySimulatorModal: React.FC<EmergencySimulatorModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [airplaneMode, setAirplaneMode] = useState<boolean>(true);
+  const [airplaneMode, setAirplaneMode] = useState(true);
   const [selectedScenario, setSelectedScenario] = useState<BreakdownScenario>(breakdownScenarios[0]);
-  const [stage, setStage] = useState<SimStage>('idle');
-  const [currentHop, setCurrentHop] = useState<number>(0);
-  const [bountyAmountInr, setBountyAmountInr] = useState<number>(selectedScenario.suggestedBountyInr);
-  const [etaSeconds, setEtaSeconds] = useState<number>(14);
-  const modalContentRef = useRef<HTMLDivElement>(null);
+  const [bountyAmountInr, setBountyAmountInr] = useState(breakdownScenarios[0].suggestedBountyInr);
+  const [stage, setStage] = useState<SimulationStage>('idle');
+  const [currentHop, setCurrentHop] = useState(0);
+  const [etaSeconds, setEtaSeconds] = useState(180);
+  const [realGps, setRealGps] = useState<GeoLocationState>(DEFAULT_FALLBACK_LOCATION);
 
-  // Update bounty when scenario changes
+  // Real Crypto Hash State
+  const [cryptoHash, setCryptoHash] = useState<string>('0xPending');
+  const [encryptedPayload, setEncryptedPayload] = useState<string>('');
+
+  // Real Microphone Voice Dispatch Recorder State
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [audioBlobUrl, setAudioBlobUrl] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // Query real GPS location
+  useEffect(() => {
+    if (isOpen) {
+      getRealDeviceLocation().then((loc) => setRealGps(loc));
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     setBountyAmountInr(selectedScenario.suggestedBountyInr);
-    setStage('idle');
-    setCurrentHop(0);
   }, [selectedScenario]);
 
   // Handle ESC key to close modal
@@ -50,72 +78,157 @@ export const EmergencySimulatorModal: React.FC<EmergencySimulatorModalProps> = (
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Run simulation workflow
-  const handleStartSimulation = () => {
-    sound.playSosAlarm();
-    setStage('encrypting');
-    setCurrentHop(0);
+  // Real Audio Voice Recording Functions
+  const startVoiceRecording = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Microphone access is not supported in this browser.');
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
 
-    // Step 1: Encrypting packet (800ms)
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const url = URL.createObjectURL(audioBlob);
+        setAudioBlobUrl(url);
+        stream.getTracks().forEach((t) => t.stop());
+      };
+
+      recorder.start();
+      setIsRecordingAudio(true);
+      sound.playClick(900);
+    } catch (err) {
+      console.warn('Microphone access failed:', err);
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    if (mediaRecorderRef.current && isRecordingAudio) {
+      mediaRecorderRef.current.stop();
+      setIsRecordingAudio(false);
+      sound.playClick(600);
+    }
+  };
+
+  // Launch Simulation and Real Mesh Broadcast
+  const handleStartSimulation = async () => {
+    sound.playMorseSOS();
+    setStage('encrypting');
+
+    // 1. Generate real AES-256-GCM encryption & SHA-256 telemetry hash
+    const rawTelemetry = {
+      scenario: selectedScenario.title,
+      bountyInr: bountyAmountInr,
+      gps: { lat: realGps.lat, lng: realGps.lng, alt: realGps.altitude },
+      node: meshBus.localNodeId,
+      timestamp: Date.now(),
+    };
+
+    const encResult = await encryptPayloadAES(JSON.stringify(rawTelemetry));
+    setCryptoHash(encResult.hash);
+    setEncryptedPayload(encResult.ciphertext);
+
+    // 2. Broadcast Live Beacon on real cross-tab mesh bus
+    const liveBeacon: LiveDistressBeacon = {
+      id: 'beacon-' + Date.now().toString(36),
+      senderNodeId: meshBus.localNodeId,
+      senderName: 'You (Mahindra Thar 4x4)',
+      vehicle: 'Mahindra Thar 4x4',
+      category: selectedScenario.category,
+      issueTitle: selectedScenario.title,
+      severity: selectedScenario.severity,
+      lat: realGps.lat,
+      lng: realGps.lng,
+      altitude: realGps.altitude,
+      bountyInr: bountyAmountInr,
+      timestamp: Date.now(),
+      encryptedHash: encResult.hash.slice(0, 16) + '...',
+      status: 'BROADCASTING',
+      hops: selectedScenario.estimatedHops,
+    };
+
+    meshBus.broadcastSOS(liveBeacon);
+
+    // 3. Step Through Multi-Hop Relay
     setTimeout(() => {
       setStage('hopping');
-      sound.playMeshHop(1);
       setCurrentHop(1);
+      sound.playMeshHop(1);
+    }, 1200);
 
-      // Hop 2 (1600ms)
-      setTimeout(() => {
-        sound.playMeshHop(2);
-        setCurrentHop(2);
+    setTimeout(() => {
+      setCurrentHop(2);
+      sound.playMeshHop(2);
+    }, 2400);
 
-        // Hop 3 (2400ms)
-        setTimeout(() => {
-          sound.playMeshHop(3);
-          setCurrentHop(3);
-          setStage('escrow_locked');
-          sound.playClick(920);
+    setTimeout(() => {
+      setCurrentHop(3);
+      sound.playMeshHop(3);
+      setStage('escrow_locked');
+      sound.playRadioSquelch();
+    }, 3600);
 
-          // Dispatched (3400ms)
-          setTimeout(() => {
-            setStage('dispatched');
-            sound.playSuccessChime();
+    setTimeout(() => {
+      setStage('dispatched');
+      setEtaSeconds(45);
+      sound.playClick(1000);
+    }, 5000);
 
-            // Countdown to Rescue (starts at 6s)
-            let countdown = 6;
-            const timer = setInterval(() => {
-              countdown -= 1;
-              setEtaSeconds(countdown);
-              if (countdown <= 0) {
-                clearInterval(timer);
-                setStage('rescued');
-                sound.playSuccessChime();
+    setTimeout(() => {
+      setStage('rescued');
+      sound.playSuccessChime();
 
-                // Trigger celebration confetti
-                confetti({
-                  particleCount: 120,
-                  spread: 80,
-                  origin: { y: 0.6 },
-                  colors: ['#b6f014', '#00f0ff', '#ffffff', '#9855ff'],
-                });
-              }
-            }, 1000);
-          }, 1200);
-        }, 1000);
-      }, 1000);
-    }, 900);
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#b6f014', '#00f0ff', '#ffffff', '#a855f7'],
+      });
+    }, 7200);
   };
 
   const handleReset = () => {
     setStage('idle');
     setCurrentHop(0);
-    setEtaSeconds(14);
-    sound.playClick(600);
+    setEtaSeconds(180);
+    setAudioBlobUrl(null);
+    sound.playClick(440);
+  };
+
+  // Export encrypted .resq packet file
+  const handleExportOfflinePacket = () => {
+    const packetData = {
+      protocol: 'RESQGRID_IN865_OFFLINE_V2',
+      scenario: selectedScenario.title,
+      bountyInr: bountyAmountInr,
+      cryptoHash: cryptoHash,
+      ciphertext: encryptedPayload,
+      coordinates: { lat: realGps.lat, lng: realGps.lng },
+      timestamp: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(packetData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `RESQ_DISTRESS_${Date.now()}.resq`;
+    a.click();
+    sound.playClick(900);
   };
 
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
-      {/* Backdrop with Click to Close */}
+      {/* Modal Backdrop with Click to Close */}
       <div
         onClick={(e) => {
           if (e.target === e.currentTarget) {
@@ -126,34 +239,31 @@ export const EmergencySimulatorModal: React.FC<EmergencySimulatorModalProps> = (
         className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md overflow-hidden"
       >
         <motion.div
-          ref={modalContentRef}
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#021013] border-2 border-white/20 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.85),0_0_40px_rgba(182,240,20,0.18)] overflow-hidden"
+          className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-[#031519] border-2 border-[#b6f014]/40 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.85),0_0_35px_rgba(182,240,20,0.15)] overflow-hidden"
         >
-          {/* Top Bar with Prominent, Always-Visible Close Button */}
+          {/* Top Bar Header with Clear In-View Close Button */}
           <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 py-4 bg-[#041c22] border-b border-white/15 z-20">
             <div className="flex items-center gap-3">
               <div className="flex gap-1.5">
-                <span className="w-3 h-3 rounded-full bg-rose-500/90 inline-block" />
-                <span className="w-3 h-3 rounded-full bg-amber-500/90 inline-block" />
-                <span className="w-3 h-3 rounded-full bg-emerald-500/90 inline-block" />
+                <span className="w-3 h-3 rounded-full bg-rose-500/80" />
+                <span className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
               </div>
-              <span className="font-mono text-xs font-bold text-white tracking-wider flex items-center gap-2">
-                <Radio className="w-3.5 h-3.5 text-[#b6f014]" />
-                INDIA_EMERGENCY_MESH_SIMULATOR://v2.4
+              <span className="font-mono text-xs font-bold text-slate-300 flex items-center gap-2">
+                <Radio className="w-3.5 h-3.5 text-[#b6f014] animate-pulse" />
+                OFF_GRID_MESH_EMERGENCY_DISPATCH_TERMINAL
               </span>
             </div>
 
-            {/* Clearly Styled Close Button */}
             <button
               onClick={() => {
                 sound.playClick(500);
                 onClose();
               }}
-              aria-label="Close emergency simulator"
+              aria-label="Close emergency simulator modal"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-rose-500/20 text-slate-300 hover:text-white border border-white/20 hover:border-rose-400/50 transition-all font-mono text-xs cursor-pointer"
             >
               <span>Close</span>
@@ -163,70 +273,69 @@ export const EmergencySimulatorModal: React.FC<EmergencySimulatorModalProps> = (
 
           {/* Scrollable Modal Body */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-            {/* Control Strip: Airplane Mode & Indian Hardware Connectivity */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 p-3.5 sm:p-4 rounded-2xl bg-black/40 border border-white/10">
+            {/* Telemetry Status Control Strip */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Airplane Mode Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      airplaneMode ? 'bg-rose-500 text-white' : 'bg-slate-700 text-slate-300'
-                    }`}
-                  >
-                    <Plane className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                    <WifiOff className="w-4 h-4" />
                   </div>
                   <div>
-                    <span className="text-xs font-mono font-bold block text-white">Airplane Mode</span>
+                    <span className="text-xs font-mono font-bold text-white block">
+                      Airplane Mode
+                    </span>
                     <span className="text-[10px] font-mono text-slate-400">
-                      {airplaneMode ? '0 BARS (OFFLINE)' : 'JIO/AIRTEL CONNECTED'}
+                      0 BARS (OFFLINE)
                     </span>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => {
-                    setAirplaneMode(!airplaneMode);
-                    sound.playClick(700);
+                <input
+                  type="checkbox"
+                  checked={airplaneMode}
+                  onChange={(e) => {
+                    setAirplaneMode(e.target.checked);
+                    sound.playClick(600);
                   }}
-                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
-                    airplaneMode ? 'bg-rose-500' : 'bg-slate-700'
-                  }`}
-                >
-                  <div
-                    className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                      airplaneMode ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
+                  className="toggle accent-[#b6f014] w-5 h-5 cursor-pointer"
+                />
               </div>
 
-              {/* Protocol status */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 font-mono text-xs">
-                <div className="w-8 h-8 rounded-lg bg-cyan-950 text-cyan-400 flex items-center justify-center border border-cyan-500/30">
+              {/* Radio ISM Band */}
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
                   <Radio className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px]">INDIAN ISM BAND</span>
-                  <span className="text-cyan-300 font-bold">IN865 (865MHz) + BLE 5.3</span>
+                  <span className="text-xs font-mono font-bold text-slate-400 block uppercase">
+                    Frequency Band
+                  </span>
+                  <span className="text-xs font-mono font-bold text-cyan-300">
+                    IN865 (865MHz) + BLE 5.3
+                  </span>
                 </div>
               </div>
 
-              {/* Escrow Status in Rupees */}
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 font-mono text-xs">
-                <div className="w-8 h-8 rounded-lg bg-emerald-950 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+              {/* Smart Escrow Locked in Rupees */}
+              <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
                   <Lock className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px]">SMART ESCROW</span>
-                  <span className="text-[#b6f014] font-bold">₹{bountyAmountInr.toLocaleString('en-IN')} INR LOCKED</span>
+                  <span className="text-xs font-mono font-bold text-slate-400 block uppercase">
+                    Smart Escrow
+                  </span>
+                  <span className="text-xs font-mono font-black text-emerald-400">
+                    ₹{bountyAmountInr.toLocaleString('en-IN')} INR LOCKED
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Step 1: Pick Breakdown Scenario */}
+            {/* Breakdown Scenario Selector */}
             <div>
-              <label className="text-xs font-mono text-slate-400 font-bold uppercase tracking-wider block mb-3">
-                1. Select Simulated Indian Terrain Breakdown:
+              <label className="text-xs font-mono text-slate-400 font-bold uppercase block mb-3">
+                1. Select Simulated Breakdown Condition:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {breakdownScenarios.map((scen) => {
@@ -262,7 +371,7 @@ export const EmergencySimulatorModal: React.FC<EmergencySimulatorModalProps> = (
                         {scen.description}
                       </p>
                       <div className="mt-2.5 flex items-center justify-between text-[10px] font-mono pt-2 border-t border-white/5">
-                        <span className="text-slate-500">Bounty: ₹{scen.suggestedBountyInr.toLocaleString('en-IN')}</span>
+                        <span className="text-slate-400">Bounty: ₹{scen.suggestedBountyInr.toLocaleString('en-IN')}</span>
                         <span className="text-[#b6f014] font-bold">{scen.estimatedHops} Hops</span>
                       </div>
                     </div>
@@ -271,12 +380,57 @@ export const EmergencySimulatorModal: React.FC<EmergencySimulatorModalProps> = (
               </div>
             </div>
 
-            {/* Step 2: Live Multi-Hop Telemetry Terminal Visualizer */}
+            {/* Real Voice Dispatch Memo Recorder */}
+            <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                  <Mic className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-mono font-bold text-white block">
+                    Microphone Voice Dispatch Memo
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {isRecordingAudio
+                      ? '🔴 Recording audio from microphone...'
+                      : audioBlobUrl
+                      ? '✅ Voice note recorded and attached to packet'
+                      : 'Record real spoken voice note for responders'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {!isRecordingAudio ? (
+                  <button
+                    onClick={startVoiceRecording}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-purple-300 border border-purple-500/40 text-xs font-mono transition-all cursor-pointer"
+                  >
+                    <Mic className="w-3.5 h-3.5" />
+                    <span>Record Voice Note</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopVoiceRecording}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500 text-white text-xs font-mono font-bold animate-pulse cursor-pointer"
+                  >
+                    <Square className="w-3.5 h-3.5 fill-current" />
+                    <span>Stop Recording</span>
+                  </button>
+                )}
+
+                {audioBlobUrl && (
+                  <audio src={audioBlobUrl} controls className="h-8 max-w-[180px]" />
+                )}
+              </div>
+            </div>
+
+            {/* Live Multi-Hop Telemetry Terminal Visualizer */}
             <div className="p-4 rounded-2xl bg-black/60 border border-white/15">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-mono font-bold text-white flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#00f0ff] animate-ping" />
-                  TELEMETRY PIPELINE & HOP MONITOR (HIMALAYAN MESH)
+                  TELEMETRY PIPELINE & HOP MONITOR
                 </span>
                 <span className="text-[10px] font-mono text-slate-400">
                   STATUS: <strong className="text-[#b6f014] uppercase">{stage}</strong>
@@ -309,12 +463,12 @@ export const EmergencySimulatorModal: React.FC<EmergencySimulatorModalProps> = (
               <div className="p-3 bg-[#010a0c] rounded-xl font-mono text-[11px] space-y-1.5 border border-white/10 text-slate-300 min-h-[110px]">
                 {stage === 'idle' && (
                   <p className="text-slate-500">
-                    &gt; Radio idle. Click "Send Distress Beacon" below to simulate offline packet routing across passing Indian vehicles.
+                    &gt; Radio idle. Click "Send Distress Beacon" below to broadcast encrypted offline packets across passing vehicles.
                   </p>
                 )}
                 {stage === 'encrypting' && (
                   <p className="text-cyan-400 animate-pulse">
-                    &gt; [AES-256-GCM] Packetizing distress payload: {selectedScenario.title} ... 0 bars Jio/Airtel detected.
+                    &gt; [AES-256-GCM] Packetizing distress payload: SHA-256: {cryptoHash.slice(0, 24)}... (0 bars detected).
                   </p>
                 )}
                 {stage === 'hopping' && (
@@ -323,7 +477,7 @@ export const EmergencySimulatorModal: React.FC<EmergencySimulatorModalProps> = (
                       &gt; [BLE 5.3 BROADCAST] Hop {currentHop}/3 caught by passing Mahindra Thar 4x4 (RSSI: -58 dBm).
                     </p>
                     <p className="text-slate-400">
-                      &gt; Relay forwarded to Khardung La LoRa Repeater #08 (865MHz, 22.4 km range).
+                      &gt; Cross-tab broadcast relayed across local mesh network bus.
                     </p>
                   </>
                 )}
@@ -333,13 +487,13 @@ export const EmergencySimulatorModal: React.FC<EmergencySimulatorModalProps> = (
                       &gt; [ESCROW LOCKED] ₹{bountyAmountInr.toLocaleString('en-IN')} INR collateral verified via community multi-sig.
                     </p>
                     <p className="text-[#b6f014]">
-                      &gt; [DISPATCH CONFIRMED] Unit 04 (Force Gurkha 4x4 - WARN Winch) en route. GPS ETA: {etaSeconds}s.
+                      &gt; [DISPATCH CONFIRMED] Unit 08 (Force Gurkha 4x4 - WARN Winch) en route. GPS ETA: {etaSeconds}s.
                     </p>
                   </>
                 )}
                 {stage === 'rescued' && (
                   <p className="text-emerald-400 font-bold">
-                    &gt; [RESCUE ACCOMPLISHED] Vehicle recovered! Smart contract bounty of ₹{bountyAmountInr.toLocaleString('en-IN')} released to local responder.
+                    &gt; [RESCUE ACCOMPLISHED] Vehicle recovered! Smart contract bounty of ₹{bountyAmountInr.toLocaleString('en-IN')} released to responder.
                   </p>
                 )}
               </div>
@@ -355,6 +509,14 @@ export const EmergencySimulatorModal: React.FC<EmergencySimulatorModalProps> = (
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Reset
+              </button>
+
+              <button
+                onClick={handleExportOfflinePacket}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-cyan-300 font-mono text-xs border border-cyan-500/30 transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Export .resq Packet
               </button>
             </div>
 

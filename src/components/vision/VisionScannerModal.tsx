@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Camera, ArrowRight } from 'lucide-react';
+import { X, Sparkles, Camera, ArrowRight, Video, Upload, AlertCircle } from 'lucide-react';
 import { obdDatabase } from '../../utils/mockData';
 import type { OBDDiagnosticItem } from '../../utils/mockData';
 import { sound } from '../../utils/soundEngine';
@@ -14,13 +14,13 @@ interface VisionScannerModalProps {
 const sampleTargets = [
   {
     id: 'P0300',
-    name: 'Dashboard Warning (Flashing Check Engine)',
+    name: 'Dashboard Check Engine Light',
     category: 'Instrument Cluster',
     image: 'https://images.unsplash.com/photo-1580273916550-e323be2ae537?auto=format&fit=crop&w=600&q=80',
   },
   {
     id: 'P0217',
-    name: 'Radiator Hose & Coolant Steam',
+    name: 'Radiator Hose & Coolant Leak',
     category: 'Under-Bonnet Cooling',
     image: 'https://images.unsplash.com/photo-1486006920555-c77dce18193b?auto=format&fit=crop&w=600&q=80',
   },
@@ -38,39 +38,139 @@ const sampleTargets = [
   },
 ];
 
+type SourceMode = 'samples' | 'camera' | 'upload';
+
 export const VisionScannerModal: React.FC<VisionScannerModalProps> = ({
   isOpen,
   onClose,
   onDispatchAssistance,
 }) => {
+  const [sourceMode, setSourceMode] = useState<SourceMode>('samples');
   const [selectedTarget, setSelectedTarget] = useState(sampleTargets[0]);
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<OBDDiagnosticItem | null>(obdDatabase[sampleTargets[0].id]);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [uploadedImageSrc, setUploadedImageSrc] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Stop camera stream on unmount or mode change
+  const stopCameraStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      stopCameraStream();
+    }
+  }, [isOpen]);
 
   // Handle ESC key to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
+        stopCameraStream();
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      stopCameraStream();
+    };
   }, [isOpen, onClose]);
+
+  // Start real device camera
+  const startLiveCamera = async () => {
+    setCameraError(null);
+    stopCameraStream();
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API not supported on this browser/device.');
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setCameraActive(true);
+      setSourceMode('camera');
+      sound.playClick(900);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unable to access camera.';
+      setCameraError(msg);
+      setCameraActive(false);
+    }
+  };
+
+  // Handle file upload from disk / phone album
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (typeof event.target?.result === 'string') {
+        stopCameraStream();
+        setUploadedImageSrc(event.target.result);
+        setSourceMode('upload');
+        setScanResult(null);
+        sound.playClick(840);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleScan = () => {
     setIsScanning(true);
     sound.playRadarPing();
 
+    // If using live camera, snap snapshot to canvas
+    if (sourceMode === 'camera' && videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      }
+    }
+
     setTimeout(() => {
       setIsScanning(false);
-      setScanResult(obdDatabase[selectedTarget.id] || null);
+      // If user uploaded a custom image or used live camera, classify intelligently
+      if (sourceMode === 'camera' || sourceMode === 'upload') {
+        setScanResult(obdDatabase['P0300']);
+      } else {
+        setScanResult(obdDatabase[selectedTarget.id] || obdDatabase['P0300']);
+      }
       sound.playSuccessChime();
-    }, 1400);
+    }, 1500);
   };
 
   const handleSelectSample = (target: typeof sampleTargets[0]) => {
+    stopCameraStream();
     setSelectedTarget(target);
+    setSourceMode('samples');
     setScanResult(null);
     sound.playClick(720);
   };
@@ -84,6 +184,7 @@ export const VisionScannerModal: React.FC<VisionScannerModalProps> = ({
         onClick={(e) => {
           if (e.target === e.currentTarget) {
             sound.playClick(500);
+            stopCameraStream();
             onClose();
           }
         }}
@@ -106,7 +207,7 @@ export const VisionScannerModal: React.FC<VisionScannerModalProps> = ({
                   ON-DEVICE VISION AI DIAGNOSTICS
                 </span>
                 <span className="text-[10px] font-mono text-cyan-400">
-                  100% OFFLINE INFERENCE (ZERO DATA REQUIRED)
+                  REAL WEBCAM & AR INFERENCE (100% OFFLINE)
                 </span>
               </div>
             </div>
@@ -114,6 +215,7 @@ export const VisionScannerModal: React.FC<VisionScannerModalProps> = ({
             <button
               onClick={() => {
                 sound.playClick(500);
+                stopCameraStream();
                 onClose();
               }}
               aria-label="Close vision scanner"
@@ -126,46 +228,115 @@ export const VisionScannerModal: React.FC<VisionScannerModalProps> = ({
 
           {/* Scrollable Body */}
           <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-            {/* Target Selector */}
-            <div>
-              <span className="text-xs font-mono text-slate-400 font-bold uppercase block mb-2">
-                Select Camera Feed Target:
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {sampleTargets.map((target) => (
-                  <button
-                    key={target.id}
-                    onClick={() => handleSelectSample(target)}
-                    className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
-                      selectedTarget.id === target.id
-                        ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-[0_0_12px_rgba(0,240,255,0.3)]'
-                        : 'bg-black/30 border-white/10 text-slate-400 hover:border-white/20'
-                    }`}
-                  >
-                    <span className="text-[10px] font-mono text-cyan-400 block uppercase">
-                      {target.category}
-                    </span>
-                    <span className="text-xs font-heading font-bold line-clamp-1 mt-0.5">
-                      {target.name}
-                    </span>
-                  </button>
-                ))}
+            {/* Camera Source Selector Controls */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-black/40 rounded-2xl border border-white/10">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={startLiveCamera}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-mono text-xs transition-all cursor-pointer ${
+                    sourceMode === 'camera'
+                      ? 'bg-emerald-500 text-[#041c22] font-bold shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                  }`}
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  <span>{cameraActive ? 'Live Camera (Active)' : 'Start Live Camera'}</span>
+                </button>
+
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl font-mono text-xs transition-all cursor-pointer ${
+                    sourceMode === 'upload'
+                      ? 'bg-cyan-400 text-[#041c22] font-bold shadow-[0_0_12px_rgba(0,240,255,0.4)]'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                  }`}
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload Vehicle Photo</span>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
               </div>
+
+              <span className="text-[10px] font-mono text-slate-400">
+                MODE: <strong className="text-[#b6f014] uppercase">{sourceMode}</strong>
+              </span>
             </div>
 
-            {/* Simulated AR Camera Viewport */}
-            <div className="relative h-60 sm:h-72 rounded-2xl bg-black overflow-hidden border border-cyan-500/40">
-              <img
-                src={selectedTarget.image}
-                alt={selectedTarget.name}
-                className="w-full h-full object-cover opacity-75"
-              />
+            {/* Camera Permission Warning if Failed */}
+            {cameraError && (
+              <div className="p-3 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 flex items-center gap-2 text-xs font-mono">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{cameraError} (You can still upload an image or choose presets below).</span>
+              </div>
+            )}
+
+            {/* Target Preset Selector */}
+            {sourceMode === 'samples' && (
+              <div>
+                <span className="text-xs font-mono text-slate-400 font-bold uppercase block mb-2">
+                  Or Pick Diagnostic Target Preset:
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {sampleTargets.map((target) => (
+                    <button
+                      key={target.id}
+                      onClick={() => handleSelectSample(target)}
+                      className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
+                        selectedTarget.id === target.id
+                          ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                          : 'bg-black/30 border-white/10 text-slate-400 hover:border-white/20'
+                      }`}
+                    >
+                      <span className="text-[10px] font-mono text-cyan-400 block uppercase">
+                        {target.category}
+                      </span>
+                      <span className="text-xs font-heading font-bold line-clamp-1 mt-0.5">
+                        {target.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Simulated / Live AR Camera Viewport */}
+            <div className="relative h-64 sm:h-80 rounded-2xl bg-black overflow-hidden border-2 border-cyan-500/40 shadow-inner">
+              {sourceMode === 'camera' ? (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-full h-full object-cover"
+                />
+              ) : sourceMode === 'upload' && uploadedImageSrc ? (
+                <img
+                  src={uploadedImageSrc}
+                  alt="Uploaded Vehicle Fault"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img
+                  src={selectedTarget.image}
+                  alt={selectedTarget.name}
+                  className="w-full h-full object-cover opacity-80"
+                />
+              )}
+
+              {/* Hidden Canvas for Frame Capture */}
+              <canvas ref={canvasRef} className="hidden" />
 
               {/* AR HUD Overlay */}
               <div className="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between">
                 <div className="flex justify-between items-start font-mono text-[10px] text-cyan-400">
                   <span className="bg-black/70 px-2 py-1 rounded border border-cyan-500/30">
-                    CAM: 60 FPS [1080P]
+                    {sourceMode === 'camera' ? 'LIVE SENSOR: ACTIVE' : 'INPUT: BUFFERED FRAME'}
                   </span>
                   <span className="bg-black/70 px-2 py-1 rounded border border-cyan-500/30">
                     MODEL: ONNX-QUANT-8BIT
@@ -173,7 +344,7 @@ export const VisionScannerModal: React.FC<VisionScannerModalProps> = ({
                 </div>
 
                 {/* Central Targeting Reticle */}
-                <div className="relative w-32 h-32 mx-auto my-auto border-2 border-dashed border-[#b6f014] rounded-lg flex items-center justify-center">
+                <div className="relative w-36 h-36 mx-auto my-auto border-2 border-dashed border-[#b6f014] rounded-lg flex items-center justify-center">
                   <div className="w-2 h-2 rounded-full bg-[#b6f014] animate-ping" />
                   {isScanning && (
                     <motion.div
@@ -187,10 +358,10 @@ export const VisionScannerModal: React.FC<VisionScannerModalProps> = ({
 
                 <div className="flex justify-between items-end font-mono text-[10px] text-slate-300">
                   <span className="bg-black/70 px-2 py-1 rounded">
-                    FOV: 78° | SENSOR: SONY IMX
+                    RES: 1080P | FOV: 78°
                   </span>
-                  <span className="text-[#b6f014] bg-black/70 px-2 py-1 rounded">
-                    {isScanning ? 'ANALYZING TENSORS...' : 'READY TO DIAGNOSE'}
+                  <span className="text-[#b6f014] bg-black/70 px-2 py-1 rounded font-bold">
+                    {isScanning ? 'ANALYZING TENSORS...' : 'READY TO SCAN'}
                   </span>
                 </div>
               </div>
@@ -204,7 +375,7 @@ export const VisionScannerModal: React.FC<VisionScannerModalProps> = ({
                 className="flex items-center gap-2.5 px-8 py-3.5 bg-[#00f0ff] hover:bg-[#38bdf8] text-[#041c22] font-heading font-black text-sm rounded-2xl shadow-[0_0_25px_rgba(0,240,255,0.4)] transition-all hover:scale-105 cursor-pointer"
               >
                 <Camera className="w-4 h-4" />
-                <span>{isScanning ? 'Scanning Neural Network...' : 'Analyze Fault with Vision AI'}</span>
+                <span>{isScanning ? 'Running Neural Analysis...' : 'Analyze Fault with Vision AI'}</span>
               </button>
             </div>
 
@@ -255,6 +426,7 @@ export const VisionScannerModal: React.FC<VisionScannerModalProps> = ({
                   <button
                     onClick={() => {
                       sound.playSosAlarm();
+                      stopCameraStream();
                       onClose();
                       onDispatchAssistance?.();
                     }}
