@@ -13,7 +13,6 @@
 
 <br/>
 
-🌐 **Live Application URL**: [https://resqgrid-eight.vercel.app/](https://resqgrid-eight.vercel.app/)
 
 <br/>
 
