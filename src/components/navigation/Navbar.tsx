@@ -34,15 +34,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   ];
 
   return (
-    <header className="fixed top-3 left-0 right-0 z-50 flex flex-col items-center px-2 sm:px-4 lg:px-6 pointer-events-none">
+    <header className="fixed top-3 left-0 right-0 z-50 flex flex-col items-center px-3 sm:px-6 pointer-events-none">
       <motion.nav
         initial={{ y: -40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="pointer-events-auto w-full max-w-6xl backdrop-blur-2xl bg-[#041c22]/95 border border-white/15 rounded-full px-3 sm:px-4 lg:px-6 py-2 shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.08)] flex items-center justify-between gap-2 sm:gap-3"
+        className="pointer-events-auto w-full max-w-6xl backdrop-blur-2xl bg-[#041c22]/95 border border-white/15 rounded-full px-3.5 sm:px-5 py-2 shadow-[0_20px_40px_-8px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.08)] flex items-center justify-between gap-2 sm:gap-4"
       >
-        {/* Left: Brand Logo & Compact Node Status */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* Left: Brand Logo & Status */}
+        <div className="flex items-center gap-2.5 shrink-0">
           <a
             href="#"
             onClick={() => sound.playClick(900)}
@@ -59,7 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </a>
 
-          {/* Compact Mesh Node Pill */}
+          {/* Compact Mesh Status Pill */}
           <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-black/40 border border-white/10 rounded-full text-[10px] font-mono text-slate-300 whitespace-nowrap">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#b6f014] opacity-75" />
@@ -70,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Center: Mode Switcher & Navigation Links */}
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-2">
           {/* Dual-Mode Switcher */}
           <div className="flex items-center bg-black/50 p-1 rounded-full border border-white/10 shrink-0">
             <button
@@ -78,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 sound.playClick(800);
                 onToggleViewMode('driver');
               }}
-              className={`px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-mono transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all cursor-pointer ${
                 viewMode === 'driver'
                   ? 'bg-[#b6f014] text-[#041c22] font-black shadow-[0_0_10px_rgba(182,240,20,0.35)]'
                   : 'text-slate-400 hover:text-white'
@@ -91,7 +91,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 sound.playRadioSquelch();
                 onToggleViewMode('responder');
               }}
-              className={`px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-mono transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all cursor-pointer ${
                 viewMode === 'responder'
                   ? 'bg-cyan-400 text-[#041c22] font-black shadow-[0_0_10px_rgba(0,240,255,0.35)]'
                   : 'text-slate-400 hover:text-white'
@@ -118,36 +118,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
 
-        {/* Right Actions: Audio Toggle + Vision AI + Trigger Mesh SOS */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          {/* Mute / Audio Toggle Pill */}
+        {/* Right Actions: Audio Button + Vision AI + Trigger Mesh SOS */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          {/* Clean, Non-Overlapping Audio Toggle Button */}
           <button
             onClick={handleToggleSound}
-            aria-label={isMuted ? 'Unmute sound' : 'Mute sound'}
-            title={isMuted ? 'Telemetry SFX Muted' : 'Telemetry SFX Active'}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all cursor-pointer select-none text-xs font-mono shrink-0 ${
+            aria-label={isMuted ? 'Unmute telemetry audio' : 'Mute telemetry audio'}
+            title={isMuted ? 'Audio Muted (Click to Unmute)' : 'Audio Active (Click to Mute)'}
+            className={`relative w-8 h-8 rounded-full flex items-center justify-center border transition-all cursor-pointer select-none shrink-0 ${
               isMuted
                 ? 'bg-white/5 border-white/15 text-slate-400 hover:bg-white/10 hover:text-white'
-                : 'bg-emerald-950/60 border-emerald-500/40 text-[#b6f014] shadow-[0_0_10px_rgba(182,240,20,0.2)]'
+                : 'bg-emerald-950/70 border-emerald-500/50 text-[#b6f014] shadow-[0_0_10px_rgba(182,240,20,0.3)] hover:bg-emerald-900/70'
             }`}
           >
             {isMuted ? (
-              <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+              <VolumeX className="w-4 h-4 text-slate-400" />
             ) : (
-              <>
-                <div className="flex items-center gap-0.5 h-3">
-                  <span className="w-0.5 h-2 bg-[#b6f014] animate-pulse" />
-                  <span className="w-0.5 h-3 bg-[#b6f014] animate-bounce" />
-                </div>
-                <Volume2 className="w-3.5 h-3.5 text-[#b6f014]" />
-              </>
+              <Volume2 className="w-4 h-4 text-[#b6f014]" />
             )}
-            <span className="text-[10px] hidden md:inline font-bold">
-              {isMuted ? 'MUTED' : 'SFX'}
-            </span>
           </button>
 
-          {/* Vision AI Button */}
+          {/* Vision AI Trigger Button */}
           <button
             onClick={() => {
               sound.playClick(840);
